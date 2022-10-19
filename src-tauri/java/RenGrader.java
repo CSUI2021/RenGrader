@@ -46,15 +46,18 @@ public class RenGrader {
 		System.setIn(in);
 		System.setOut(out);
 
-		var future = executor.submit(new Callable<Integer>() {
-			public Integer call() {
+		var future = executor.submit(new Callable<Long>() {
+			public Long call() {
+				long start = System.currentTimeMillis();
 				{{ CLASS_NAME }}.main(new String[] {});
-				return 0;
+				long end = System.currentTimeMillis();
+				return start - end;
 			}
 		});
 
+		Long result = 0l;
 		try {
-			future.get(timeout, TimeUnit.MILLISECONDS);
+			result = future.get(timeout, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {
 			return "ERR";
 		} catch (ExecutionException e) {
@@ -68,6 +71,10 @@ public class RenGrader {
 			out.close();
 		} catch (IOException e) {
 			return "ERR";
+		}
+
+		if (result > timeout) {
+			return "TLE";
 		}
 
 		try {
