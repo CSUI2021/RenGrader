@@ -64,13 +64,13 @@ public class RenGrader {
 			return "RTE";
 		} catch (TimeoutException e) {
 			return "TLE";
-		}
-
-		try {
-			in.close();
-			out.close();
-		} catch (IOException e) {
-			return "ERR";
+		} finally {
+			try {
+				in.close();
+				out.close();
+			} catch (IOException e) {
+				return "ERR";
+			}
 		}
 
 		if (result > timeout) {
