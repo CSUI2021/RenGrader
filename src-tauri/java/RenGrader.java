@@ -47,7 +47,7 @@ public class RenGrader {
 		System.setOut(out);
 
 		var future = executor.submit(new Callable<Long>() {
-			public Long call() {
+			public Long call() throws Exception {
 				long start = System.currentTimeMillis();
 				{{ CLASS_NAME }}.main(new String[] {});
 				long end = System.currentTimeMillis();
