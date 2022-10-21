@@ -70,9 +70,7 @@ fn run_tests(
     let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from(&file_name)].iter().collect();
     match copy(source_path, target_temp_path.as_path()) {
         Ok(_) => (),
-        Err(_) => {
-            return Err("Failed to copy java source code to temporary directory due to ".into())
-        }
+        Err(_) => return Err("Failed to copy java source code to temporary directory".into()),
     }
 
     log_frontend!("Getting java class name".into());
