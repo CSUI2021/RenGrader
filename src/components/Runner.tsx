@@ -36,14 +36,18 @@ export const Runner = () => {
     setShow(true);
   };
 
+  const reset = () => {
+    setDebugMsg("");
+    setResult([]);
+    setErr("");
+  };
+
   return (
     <>
       <div className="flex flex-row items-center gap-2">
         <button
           onClick={async () => {
-            setDebugMsg("");
-            setResult([]);
-            setErr("");
+            reset();
             setLoading(true);
 
             if (appData.sourceFile == "" || appData.casesFolder == "") {
@@ -52,19 +56,18 @@ export const Runner = () => {
               return;
             }
 
-            const result = await invoke<IPCMessage>("run_tests", {
-              sourcePath: appData.sourceFile,
-              testCasesPath: appData.casesFolder,
-              timeout: appData.timeout * 1000,
-            });
-            setLoading(false);
-
-            if (result.error) {
-              showError(result.message.trim());
-              return;
+            try {
+              const result = await invoke<IPCMessage>("run_tests", {
+                sourcePath: appData.sourceFile,
+                testCasesPath: appData.casesFolder,
+                timeout: appData.timeout * 1000,
+              });
+              setResult(result.message.split(",").slice(0, -1));
+            } catch (err: any) {
+              showError(err);
+            } finally {
+              setLoading(false);
             }
-
-            setResult(result.message.split(",").slice(0, -1));
           }}
           className="btn btn-primary"
         >
