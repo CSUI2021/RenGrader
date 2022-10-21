@@ -34,10 +34,18 @@ fn run_tests(
     source_path: &str,
     test_cases_path: &str,
     timeout: i32,
-) -> TestResult {
-    let mut tmp_dir = handle.path_resolver().app_dir().unwrap();
+) -> Result<TestResult, String> {
+    let mut tmp_dir;
+    match handle.path_resolver().app_dir() {
+        Some(dir) => tmp_dir = dir,
+        None => return Err("Cannot get app data directory".into()),
+    }
+
     tmp_dir.push("tmp");
-    create_dir_all(tmp_dir.as_path()).unwrap();
+    match create_dir_all(tmp_dir.as_path()) {
+        Ok(_) => (),
+        Err(_) => return Err("Cannot create temporary directory".into()),
+    };
 
     window
         .emit(
@@ -46,11 +54,21 @@ fn run_tests(
                 message: format!("Copying {} to {}", source_path, tmp_dir.to_str().unwrap()),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
-    let file_name = Path::new(source_path).file_name().unwrap();
+    let file_name;
+    match Path::new(source_path).file_name() {
+        Some(name) => file_name = name,
+        None => return Err("Cannot get file name".into()),
+    }
+
     let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from(&file_name)].iter().collect();
-    copy(source_path, target_temp_path.as_path()).unwrap();
+    match copy(source_path, target_temp_path.as_path()) {
+        Ok(_) => (),
+        Err(_) => {
+            return Err("Failed to copy java source code to temporary directory due to ".into())
+        }
+    }
 
     window
         .emit(
@@ -59,9 +77,13 @@ fn run_tests(
                 message: "Getting java class name".into(),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
-    let class_name = get_class_name(target_temp_path.as_path());
+    let class_name;
+    match get_class_name(target_temp_path.as_path()) {
+        Ok(cname) => class_name = cname,
+        Err(_) => return Err("Failed to get class name, is your java file correct?".into()),
+    };
 
     window
         .emit(
@@ -70,12 +92,12 @@ fn run_tests(
                 message: format!("Java class name: {}", class_name),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
     let resource_path = handle
         .path_resolver()
         .resolve_resource("java/RenGrader.java")
-        .expect("failed to resolve resource");
+        .expect("Failed to resolve resource");
     let base_program = read_to_string(resource_path).unwrap();
 
     let escaped_path = test_cases_path.to_string().replace(r"\", r"\\");
@@ -89,7 +111,10 @@ fn run_tests(
     let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from("RenGrader.java")]
         .iter()
         .collect();
-    fs::write(target_temp_path.as_path(), result).unwrap();
+    match fs::write(target_temp_path.as_path(), result) {
+        Ok(_) => (),
+        Err(_) => return Err("Cannot write grader code".into()),
+    }
 
     window
         .emit(
@@ -98,7 +123,7 @@ fn run_tests(
                 message: "Compiling java source code".into(),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
     let mut javac = Command::new("javac");
     javac.arg(file_name);
@@ -107,10 +132,7 @@ fn run_tests(
 
     let output = javac.output().expect("Something fucky happened");
     if !output.status.success() {
-        return TestResult {
-            error: true,
-            message: str::from_utf8(&output.stderr).unwrap().into(),
-        };
+        return Err(str::from_utf8(&output.stderr).unwrap().into());
     }
 
     window
@@ -120,7 +142,7 @@ fn run_tests(
                 message: format!("Java output: {}", str::from_utf8(&output.stdout).unwrap()),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
     window
         .emit(
@@ -129,7 +151,7 @@ fn run_tests(
                 message: "Running actual grader".into(),
             },
         )
-        .unwrap();
+        .unwrap_or(());
 
     let mut java = Command::new("java");
     java.arg("RenGrader");
@@ -137,16 +159,13 @@ fn run_tests(
 
     let output = java.output().expect("Something fucky happened");
     if !output.status.success() {
-        return TestResult {
-            error: true,
-            message: str::from_utf8(&output.stderr).unwrap().into(),
-        };
+        return Err(str::from_utf8(&output.stderr).unwrap().into());
     }
 
-    return TestResult {
+    return Ok(TestResult {
         error: false,
         message: str::from_utf8(&output.stdout).unwrap().into(),
-    };
+    });
 }
 
 fn main() {
