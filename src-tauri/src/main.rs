@@ -106,29 +106,36 @@ fn run_tests(
     }
 
     log_frontend!("Compiling java source code".into());
-    let mut javac = Command::new("javac");
-    javac.arg(file_name);
-    javac.arg("RenGrader.java");
-    javac.current_dir(tmp_dir.as_path());
-
-    let output = javac.output().expect("Something fucky happened");
+    exec!(
+        "javac",
+        tmp_dir.as_path(),
+        output,
+        file_name,
+        "RenGrader.java"
+    );
     if !output.status.success() {
-        return Err(str::from_utf8(&output.stderr).unwrap().into());
+        return Err(str::from_utf8(&output.stderr)
+            .unwrap_or("Cannot decode output".into())
+            .into());
     }
 
     log_frontend!("Running actual grader".into());
-    let mut java = Command::new("java");
-    java.arg("RenGrader");
-    java.current_dir(tmp_dir.as_path());
-
-    let output = java.output().expect("Something fucky happened");
+    exec!("java", tmp_dir.as_path(), output, "RenGrader");
     if !output.status.success() {
-        return Err(str::from_utf8(&output.stderr).unwrap().into());
+        return Err(str::from_utf8(&output.stderr)
+            .unwrap_or("Cannot decode output".into())
+            .into());
     }
+
+    let program_result;
+    match str::from_utf8(&output.stdout) {
+        Ok(o) => program_result = o,
+        Err(_) => return Err("Cannot decode output".into()),
+    };
 
     return Ok(TestResult {
         error: false,
-        message: str::from_utf8(&output.stdout).unwrap().into(),
+        message: program_result.into(),
     });
 }
 

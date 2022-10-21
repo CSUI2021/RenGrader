@@ -17,3 +17,20 @@ pub fn get_class_name(source_path: &Path) -> Result<String> {
     let class_name = captured.get(1).context("Failed to get match")?.as_str();
     return Ok(class_name.trim().to_owned());
 }
+
+#[macro_export]
+macro_rules! exec {
+    ($cmd:expr,$cwd:expr,$output:ident,$($args: expr),*) => {
+        let mut cmd = Command::new($cmd);
+        $(
+            cmd.arg($args);
+        )*
+        cmd.current_dir($cwd);
+
+        let $output;
+        match cmd.output() {
+            Ok(o) => $output = o,
+            Err(_) => return Err("An error has occured".into())
+        };
+    };
+}
