@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "RenGrader",
-    "version": "0.0.0"
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -37,9 +37,7 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [
-        "java/RenGrader.java"
-      ],
+      "resources": ["java/RenGrader.java"],
       "shortDescription": "",
       "targets": "all",
       "windows": {
@@ -52,7 +50,12 @@
       "csp": null
     },
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://gist.githubusercontent.com/rorre/21a6d5ce11e4a321e8fe86d382a576d1/raw"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY1MUNCRDM3NDE0RjQxQjgKUldTNFFVOUJONzBjWlFvQ2VSOUZrVS9HUVJOOWpXWTBPWGVEVjIzV2ZXOUlSd2h3aUdreDN2S24K"
     },
     "windows": [
       {
