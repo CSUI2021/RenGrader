@@ -52,7 +52,10 @@ fn run_tests(
     tmp_dir.push("tmp");
     match create_dir_all(tmp_dir.as_path()) {
         Ok(_) => (),
-        Err(_) => return Err("Cannot create temporary directory".into()),
+        Err(err) => {
+            log_frontend!(err.to_string());
+            return Err("Cannot create temporary directory".into());
+        }
     };
 
     log_frontend!(format!(
@@ -70,14 +73,20 @@ fn run_tests(
     let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from(&file_name)].iter().collect();
     match copy(source_path, target_temp_path.as_path()) {
         Ok(_) => (),
-        Err(_) => return Err("Failed to copy java source code to temporary directory".into()),
+        Err(err) => {
+            log_frontend!(err.to_string());
+            return Err("Failed to copy java source code to temporary directory".into());
+        }
     }
 
     log_frontend!("Getting java class name".into());
     let class_name;
     match get_class_name(target_temp_path.as_path()) {
         Ok(cname) => class_name = cname,
-        Err(_) => return Err("Failed to get class name, is your java file correct?".into()),
+        Err(err) => {
+            log_frontend!(err.to_string());
+            return Err("Failed to get class name, is your java file correct?".into());
+        }
     };
 
     log_frontend!(format!("Java class name: {}", class_name));
@@ -100,7 +109,10 @@ fn run_tests(
         .collect();
     match fs::write(target_temp_path.as_path(), result) {
         Ok(_) => (),
-        Err(_) => return Err("Cannot write grader code".into()),
+        Err(err) => {
+            log_frontend!(err.to_string());
+            return Err("Cannot write grader code".into());
+        }
     }
 
     log_frontend!("Compiling java source code".into());
