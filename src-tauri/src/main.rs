@@ -35,6 +35,14 @@ fn run_tests(
     test_cases_path: &str,
     timeout: i32,
 ) -> Result<TestResult, String> {
+    macro_rules! log_frontend {
+        ($a:expr) => {{
+            window
+                .emit("onDebugMessage", Payload { message: $a })
+                .unwrap_or(());
+        }};
+    }
+
     let mut tmp_dir;
     match handle.path_resolver().app_dir() {
         Some(dir) => tmp_dir = dir,
@@ -47,14 +55,11 @@ fn run_tests(
         Err(_) => return Err("Cannot create temporary directory".into()),
     };
 
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: format!("Copying {} to {}", source_path, tmp_dir.to_str().unwrap()),
-            },
-        )
-        .unwrap_or(());
+    log_frontend!(format!(
+        "Copying {} to {}",
+        source_path,
+        tmp_dir.to_str().unwrap()
+    ));
 
     let file_name;
     match Path::new(source_path).file_name() {
@@ -70,30 +75,14 @@ fn run_tests(
         }
     }
 
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: "Getting java class name".into(),
-            },
-        )
-        .unwrap_or(());
-
+    log_frontend!("Getting java class name".into());
     let class_name;
     match get_class_name(target_temp_path.as_path()) {
         Ok(cname) => class_name = cname,
         Err(_) => return Err("Failed to get class name, is your java file correct?".into()),
     };
 
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: format!("Java class name: {}", class_name),
-            },
-        )
-        .unwrap_or(());
-
+    log_frontend!(format!("Java class name: {}", class_name));
     let resource_path = handle
         .path_resolver()
         .resolve_resource("java/RenGrader.java")
@@ -116,15 +105,7 @@ fn run_tests(
         Err(_) => return Err("Cannot write grader code".into()),
     }
 
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: "Compiling java source code".into(),
-            },
-        )
-        .unwrap_or(());
-
+    log_frontend!("Compiling java source code".into());
     let mut javac = Command::new("javac");
     javac.arg(file_name);
     javac.arg("RenGrader.java");
@@ -135,24 +116,7 @@ fn run_tests(
         return Err(str::from_utf8(&output.stderr).unwrap().into());
     }
 
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: format!("Java output: {}", str::from_utf8(&output.stdout).unwrap()),
-            },
-        )
-        .unwrap_or(());
-
-    window
-        .emit(
-            "onDebugMessage",
-            Payload {
-                message: "Running actual grader".into(),
-            },
-        )
-        .unwrap_or(());
-
+    log_frontend!("Running actual grader".into());
     let mut java = Command::new("java");
     java.arg("RenGrader");
     java.current_dir(tmp_dir.as_path());
