@@ -104,7 +104,7 @@ export const Runner = () => {
       </div>
 
       <Modal show={show} title="Error" onClose={() => setShow(false)}>
-        <pre>{err}</pre>
+        <pre className="overflow-x-auto">{err}</pre>
       </Modal>
     </>
   );
