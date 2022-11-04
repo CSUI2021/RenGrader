@@ -78,8 +78,8 @@ public class RenGrader {
 		}
 
 		try {
-			var inStr = Files.readString(output.toPath());
-			var outStr = Files.readString(myOutput.toPath());
+			var inStr = Files.readString(output.toPath()).replace("\r\n", "\n");
+			var outStr = Files.readString(myOutput.toPath()).replace("\r\n", "\n");
 
 			if (inStr.strip().equals(outStr.strip())) {
 				return "AC";
