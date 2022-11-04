@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class RenGrader {
+	private static String inputFilePath = "{{ INPUT_PATH }}";
 	private static Integer timeout = {{ TIMEOUT }};
 	private static String testCaseDir = "{{ TEST_CASE_DIR }}";
 	private static ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -35,17 +36,6 @@ public class RenGrader {
 	}
 
 	public static String runTest(File input, File output, File myOutput) {
-		InputStream in;
-		PrintStream out;
-		try {
-			in = new FileInputStream(input);
-			out = new PrintStream(myOutput);
-		} catch (FileNotFoundException e) {
-			return "ERR";
-		}
-		System.setIn(in);
-		System.setOut(out);
-
 		var future = executor.submit(new Callable<Long>() {
 			public Long call() throws Exception {
 				long start = System.currentTimeMillis();
@@ -64,13 +54,6 @@ public class RenGrader {
 			return "RTE";
 		} catch (TimeoutException e) {
 			return "TLE";
-		} finally {
-			try {
-				in.close();
-				out.close();
-			} catch (IOException e) {
-				return "ERR";
-			}
 		}
 
 		if (result > timeout) {
@@ -92,16 +75,14 @@ public class RenGrader {
 	}
 
 	public static void main(String[] args) {
-		File f = new File(testCaseDir);
-		if (!f.isDirectory()) {
-			System.err.println("Directory not found");
-			System.exit(1);
-			return;
-		}
-
 		var inputDir = Paths.get(testCaseDir, "in").toFile();
 		var outputDir = Paths.get(testCaseDir, "out").toFile();
 		var myOutputDir = Paths.get(testCaseDir, "myoutput").toFile();
+		
+		File input = new File(inputFilePath);
+		String fname = input.toPath().getFileName().toString();
+		File output = Paths.get(outputDir.toString(), fname).toFile();
+		File myOutput = Paths.get(myOutputDir.toString(), fname).toFile();
 
 		try {
 			Files.createDirectories(myOutputDir.toPath());
@@ -111,37 +92,33 @@ public class RenGrader {
 			return;
 		}
 
-		if (!inputDir.isDirectory() || !outputDir.isDirectory()) {
-			System.err.println("In/out directory not found");
-			System.exit(1);
+		var res = "";
+		InputStream in;
+		PrintStream out;
+		try {
+			in = new FileInputStream(input);
+			out = new PrintStream(myOutput);
+		} catch (FileNotFoundException e) {
+			System.err.println("Input/output file not found.");
+			System.exit(2);
 			return;
 		}
 
-		File[] inputs = inputDir.listFiles();
-		int totalTestCases = inputs.length;
-		if (totalTestCases == 0) {
-			System.err.println("No test cases found");
-			System.exit(1);
-			return;
+		System.setIn(in);
+		System.setOut(out);
+
+		res = runTest(input, output, myOutput);
+		try {
+			in.close();
+			out.close();
+		} catch (IOException e) {
+			res = "ERR";
 		}
 
-		Arrays.sort(inputs, Comparator.comparingInt(o -> Integer.parseInt(getBaseName(o.getName()))));
-		String[] results = new String[totalTestCases];
+		System.setOut(origOut);
+		System.setIn(origIn);
 
-		for (int i = 0; i < totalTestCases; i++) {
-			File input = inputs[i];
-			String fname = input.toPath().getFileName().toString();
-			File output = Paths.get(outputDir.toString(), fname).toFile();
-			File myOutput = Paths.get(myOutputDir.toString(), fname).toFile();
-
-			results[i] = runTest(input, output, myOutput);
-			System.setOut(origOut);
-			System.setIn(origIn);
-		}
-
-		for (String res : results) {
-			System.out.print(res + ",");
-		}
+		System.out.print(res);
 		executor.shutdown();
 		return;
 	}

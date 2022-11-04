@@ -6,7 +6,7 @@
 pub mod utils;
 
 use std::{
-    fs::{self, copy, create_dir_all, read_to_string},
+    fs::{self, copy, create_dir_all, read_to_string, ReadDir},
     path::{Path, PathBuf},
     process::Command,
     str,
@@ -96,56 +96,74 @@ fn run_tests(
         .expect("Failed to resolve resource");
     let base_program = read_to_string(resource_path).unwrap();
 
-    let escaped_path = test_cases_path.to_string().replace(r"\", r"\\");
-    let result = render!(
-        base_program.as_str(),
-        CLASS_NAME => class_name,
-        TEST_CASE_DIR => escaped_path,
-        TIMEOUT => timeout.to_string()
-    );
-
-    let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from("RenGrader.java")]
-        .iter()
-        .collect();
-    match fs::write(target_temp_path.as_path(), result) {
-        Ok(_) => (),
+    let input_dir: PathBuf = [&test_cases_path, "in"].iter().collect();
+    let paths: ReadDir;
+    match fs::read_dir(input_dir) {
+        Ok(p) => paths = p,
         Err(err) => {
             log_frontend!(err.to_string());
-            return Err("Cannot write grader code".into());
+            return Err("Failed to iterate through input directories".into());
         }
     }
 
-    log_frontend!("Compiling java source code".into());
-    exec!(
-        "javac",
-        tmp_dir.as_path(),
-        output,
-        file_name,
-        "RenGrader.java"
-    );
-    if !output.status.success() {
-        return Err(str::from_utf8(&output.stderr)
-            .unwrap_or("Cannot decode output".into())
-            .into());
-    }
+    let mut grader_result = String::new();
+    for path in paths {
+        let escaped_path = test_cases_path.to_string().replace(r"\", r"\\");
+        let full_path = path.unwrap().path().to_str().unwrap().replace(r"\", r"\\");
+        let result = render!(
+            base_program.as_str(),
+            INPUT_PATH => full_path,
+            CLASS_NAME => class_name,
+            TEST_CASE_DIR => escaped_path,
+            TIMEOUT => timeout.to_string()
+        );
 
-    log_frontend!("Running actual grader".into());
-    exec!("java", tmp_dir.as_path(), output, "RenGrader");
-    if !output.status.success() {
-        return Err(str::from_utf8(&output.stderr)
-            .unwrap_or("Cannot decode output".into())
-            .into());
-    }
+        let target_temp_path: PathBuf = [&tmp_dir, &PathBuf::from("RenGrader.java")]
+            .iter()
+            .collect();
+        match fs::write(target_temp_path.as_path(), result) {
+            Ok(_) => (),
+            Err(err) => {
+                log_frontend!(err.to_string());
+                return Err("Cannot write grader code".into());
+            }
+        }
 
-    let program_result;
-    match str::from_utf8(&output.stdout) {
-        Ok(o) => program_result = o,
-        Err(_) => return Err("Cannot decode output".into()),
-    };
+        log_frontend!("Compiling java source code".into());
+        exec!(
+            "javac",
+            tmp_dir.as_path(),
+            output,
+            file_name,
+            "RenGrader.java"
+        );
+        if !output.status.success() {
+            return Err(str::from_utf8(&output.stderr)
+                .unwrap_or("Cannot decode output".into())
+                .into());
+        }
+
+        log_frontend!("Running actual grader".into());
+        exec!("java", tmp_dir.as_path(), output, "RenGrader");
+        if !output.status.success() {
+            return Err(str::from_utf8(&output.stderr)
+                .unwrap_or("Cannot decode output".into())
+                .into());
+        }
+
+        let program_result;
+        match str::from_utf8(&output.stdout) {
+            Ok(o) => program_result = o,
+            Err(_) => return Err("Cannot decode output".into()),
+        };
+
+        grader_result.push_str(program_result);
+        grader_result.push(',');
+    }
 
     return Ok(TestResult {
         error: false,
-        message: program_result.into(),
+        message: grader_result,
     });
 }
 
