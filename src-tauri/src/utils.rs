@@ -26,9 +26,9 @@ macro_rules! exec {
             cmd.arg($args);
         )*
         cmd.current_dir($cwd);
-        if cfg!(windows) {
-            cmd.creation_flags(0x08000000);
-        }
+
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000);
 
         let $output;
         match cmd.output() {
