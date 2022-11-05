@@ -107,12 +107,23 @@ fn run_tests(
     }
 
     let mut grader_result = String::new();
+    let escaped_path = test_cases_path.to_string().replace(r"\", r"\\");
+
     for path in paths {
-        let escaped_path = test_cases_path.to_string().replace(r"\", r"\\");
-        let full_path = path.unwrap().path().to_str().unwrap().replace(r"\", r"\\");
+        let dir_entry = path.unwrap();
+        log_frontend!(format!(
+            "Running for testcase: {}",
+            &dir_entry.file_name().to_str().unwrap()
+        )
+        .into());
+
+        let full_path_escaped = match dir_entry.path().to_str() {
+            None => return Err("Cannot get path".into()),
+            Some(s) => s.replace(r"\", r"\\"),
+        };
         let result = render!(
             base_program.as_str(),
-            INPUT_PATH => full_path,
+            INPUT_PATH => full_path_escaped,
             CLASS_NAME => class_name,
             TEST_CASE_DIR => escaped_path,
             TIMEOUT => timeout.to_string()
