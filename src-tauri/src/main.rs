@@ -12,6 +12,9 @@ use std::{
     str,
 };
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use minijinja::render;
 use tauri::Window;
 use utils::get_class_name;
