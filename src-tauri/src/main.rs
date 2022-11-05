@@ -27,7 +27,7 @@ struct TestResult {
     message: String,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn run_tests(
     window: Window,
     handle: tauri::AppHandle,
